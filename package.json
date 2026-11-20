@@ -1,0 +1,30 @@
+{
+  "name": "listing-agent",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning src/server.ts",
+    "seed": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/seed.ts",
+    "ads": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/ads.ts",
+    "intake": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/intake.ts",
+    "chat": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/chat.ts",
+    "followups": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/followups.ts",
+    "district": "tsx scripts/make-district.ts",
+    "test": "tsx --disable-warning=ExperimentalWarning --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "eval": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning evals/run.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.11.0",
+    "@resvg/resvg-js": "^2.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.0"
+  }
+}

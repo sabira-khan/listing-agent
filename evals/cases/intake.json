@@ -1,0 +1,68 @@
+[
+  {
+    "id": "intake-shorthand-price",
+    "category": "intake",
+    "text": "Salam, owner wants to sell plot 2561 phase A2, asking 310k. Owner Walid Fares 555-0150",
+    "expect": { "phase": "A2", "plot": "2561", "price": 310000, "ownerName": "Walid Fares", "ownerPhone": "555-0150" }
+  },
+  {
+    "id": "intake-thousand-word",
+    "category": "intake",
+    "text": "Call note: plot 2447, owner Nadia, she wants 255 thousand, no agents please",
+    "expect": { "plot": "2447", "price": 255000, "ownerName": "Nadia" }
+  },
+  {
+    "id": "intake-distractor-numbers",
+    "category": "intake",
+    "text": "Plot no. 2672 in A3, corner, 663 sqm, frontage 21.4. Price 249,000. Contact the owner on +1 555 0113 after 5pm",
+    "expect": { "phase": "A3", "plot": "2672", "price": 249000, "ownerPhone": "+1 555 0113" }
+  },
+  {
+    "id": "intake-revised-price",
+    "category": "intake",
+    "text": "Update from the owner of 2533: he was asking 190k last week but now says 178k final. Someone offered him 160 already, he refused.",
+    "expect": { "plot": "2533", "price": 178000 }
+  },
+  {
+    "id": "intake-block-wording",
+    "category": "intake",
+    "text": "FOR SALE - Block A-1 / Plot 2490 / 228,000 / serious buyers only",
+    "expect": { "phase": "A1", "plot": "2490", "price": 228000 }
+  },
+  {
+    "id": "intake-missing-price",
+    "category": "intake",
+    "text": "Owner of plot 2615 wants to sell, call him to agree the price",
+    "expect": { "plot": "2615", "price": null },
+    "problem": "asking price is missing"
+  },
+  {
+    "id": "intake-wrong-phase",
+    "category": "intake",
+    "text": "Plot 2520 phase A3, 270k",
+    "expect": { "phase": "A3", "plot": "2520", "price": 270000 },
+    "problem": "not found in phase A3"
+  },
+  {
+    "id": "intake-not-an-offer",
+    "category": "intake",
+    "text": "Good morning, the meeting moved to 4pm",
+    "expect": { "plot": null, "price": null },
+    "problem": "plot number is missing"
+  },
+  {
+    "id": "intake-certificate-photo",
+    "category": "intake",
+    "text": "owner sent this, he wants 265k",
+    "image": "certificate",
+    "expect": { "phase": "A2", "plot": "2508", "price": 265000, "ownerName": "Huda Saleh" }
+  },
+  {
+    "id": "intake-certificate-only",
+    "category": "intake",
+    "text": "",
+    "image": "certificate",
+    "expect": { "phase": "A2", "plot": "2508", "price": null },
+    "problem": "asking price is missing"
+  }
+]

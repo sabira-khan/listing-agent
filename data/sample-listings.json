@@ -1,0 +1,24 @@
+{
+  "listings": [
+    { "plot": "2405", "price": 420000, "status": "published", "ownerName": "Rami Haddad", "ownerPhone": "+1 555 0101", "notes": "Owner prefers a cash sale." },
+    { "plot": "2412", "price": 395000, "status": "published", "ownerName": "Leila Mansour", "ownerPhone": "+1 555 0102", "notes": null },
+    { "plot": "2431", "price": 205000, "status": "published", "ownerName": "Omar Sayegh", "ownerPhone": "+1 555 0103", "notes": "Title deed ready." },
+    { "plot": "2447", "price": 255000, "status": "published", "ownerName": "Nadia Karam", "ownerPhone": "+1 555 0104", "notes": null },
+    { "plot": "2490", "price": 228000, "status": "published", "ownerName": "Yousef Darwish", "ownerPhone": "+1 555 0105", "notes": null },
+    { "plot": "2508", "price": 445000, "status": "published", "ownerName": "Huda Saleh", "ownerPhone": "+1 555 0106", "notes": "Will consider serious offers only." },
+    { "plot": "2520", "price": 270000, "status": "published", "ownerName": "Karim Aziz", "ownerPhone": "+1 555 0107", "notes": null },
+    { "plot": "2533", "price": 178000, "status": "published", "ownerName": "Samira Nasser", "ownerPhone": "+1 555 0108", "notes": null },
+    { "plot": "2588", "price": 215000, "status": "published", "ownerName": "Tariq Bishara", "ownerPhone": "+1 555 0109", "notes": "Corner plot on two streets." },
+    { "plot": "2604", "price": 169000, "status": "sold", "ownerName": "Mona Khoury", "ownerPhone": "+1 555 0110", "notes": null },
+    { "plot": "2615", "price": 465000, "status": "published", "ownerName": "Fadi Rahal", "ownerPhone": "+1 555 0111", "notes": null },
+    { "plot": "2640", "price": 162000, "status": "published", "ownerName": "Rania Habib", "ownerPhone": "+1 555 0112", "notes": null },
+    { "plot": "2672", "price": 249000, "status": "published", "ownerName": "Ziad Matar", "ownerPhone": "+1 555 0113", "notes": null },
+    { "plot": "2700", "price": 175000, "status": "pending", "ownerName": "Hana Issa", "ownerPhone": "+1 555 0114", "notes": null }
+  ],
+  "contacts": [
+    { "phone": "15550201", "name": "Adam", "budgetMin": 150000, "budgetMax": 220000, "phases": ["A2", "A3"], "timeline": "within 3 months", "optedIn": true },
+    { "phone": "15550202", "name": "Sara", "budgetMin": 350000, "budgetMax": 480000, "phases": [], "timeline": "this year", "optedIn": true },
+    { "phone": "15550203", "name": "Bilal", "budgetMin": null, "budgetMax": 260000, "phases": ["A1"], "timeline": null, "optedIn": true },
+    { "phone": "15550204", "name": "Dina", "budgetMin": 200000, "budgetMax": 300000, "phases": [], "timeline": "within a month", "optedIn": false }
+  ]
+}
