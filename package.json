@@ -12,6 +12,8 @@
     "ads": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/ads.ts",
     "intake": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/intake.ts",
     "chat": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/chat.ts",
+    "demo": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/demo.ts",
+    "report": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/report.ts",
     "followups": "tsx --env-file-if-exists=.env --disable-warning=ExperimentalWarning scripts/followups.ts",
     "district": "tsx scripts/make-district.ts",
     "test": "tsx --disable-warning=ExperimentalWarning --test test/*.test.ts",

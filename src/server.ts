@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { timingSafeEqual } from 'node:crypto'
 import { AD_SIZES, renderAdPng, type AdSize } from './ad'
-import { brand, handleInbound, type AppDeps } from './app'
+import { brand, handleInbound, sendMonthlyReport, type AppDeps } from './app'
 import { loadConfig, type Config } from './config'
 import { renderDashboard } from './dashboard'
 import { GeoJsonDistrict } from './district'
@@ -95,8 +95,12 @@ export function createHandler(deps: AppDeps) {
       }
       if (url.pathname === '/tasks/follow-ups' && req.method === 'POST') {
         if (!authorized(req, config.adminPassword)) return send(res, 401, 'Unauthorized')
-        const result = await runFollowUps({ store, channel: deps.channel, directory: deps.directory, brand: brand(config), followUpTemplate: config.followUpTemplate, listingTemplate: config.listingTemplate })
+        const result = await runFollowUps({ store, channel: deps.channel, directory: deps.directory, brand: brand(config), followUpTemplate: config.followUpTemplate, listingTemplate: config.listingTemplate, messageCost: config.messageCost })
         return send(res, 200, JSON.stringify(result), 'application/json')
+      }
+      if (url.pathname === '/tasks/report' && req.method === 'POST') {
+        if (!authorized(req, config.adminPassword)) return send(res, 401, 'Unauthorized')
+        return send(res, 200, await sendMonthlyReport(deps))
       }
       if (url.pathname === '/health') return send(res, 200, 'ok')
       return send(res, 404, 'Not found')

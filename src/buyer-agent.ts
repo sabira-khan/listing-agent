@@ -157,7 +157,8 @@ async function runTool(name: string, input: any, phone: string, ads: string[], d
       listingCode: listing?.code ?? null,
       budget: String(input.budget ?? ''),
       timeline: String(input.timeline ?? ''),
-      summary: String(input.summary ?? '')
+      summary: String(input.summary ?? ''),
+      source: store.contact(phone).source ?? 'direct'
     })
     store.updateContact(phone, { handedOffAt: lead.createdAt })
     store.log('agent', 'hand_off', lead.listingCode, `lead ${lead.id}`)

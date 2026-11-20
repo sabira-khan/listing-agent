@@ -2,6 +2,8 @@ export interface Config {
   companyName: string
   contactLine: string
   currency: string
+  spendCurrency: string
+  whatsappNumber: string
   ownerPhones: string[]
   staffPhones: string[]
   agentModel: string
@@ -39,6 +41,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     companyName: env.COMPANY_NAME || 'Harbor Point Realty',
     contactLine: env.CONTACT_LINE || '',
     currency: env.CURRENCY || 'KWD',
+    spendCurrency: env.SPEND_CURRENCY || 'USD',
+    whatsappNumber: normalizePhone(env.WHATSAPP_DISPLAY_NUMBER ?? ''),
     ownerPhones: phoneList(env.OWNER_PHONES),
     staffPhones: phoneList(env.STAFF_PHONES),
     agentModel: env.AGENT_MODEL || 'claude-haiku-5-5',

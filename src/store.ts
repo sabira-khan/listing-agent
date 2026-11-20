@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite'
-import type { AuditEvent, Contact, Lead, Listing, ListingStatus, NewListing } from './types'
+import type { AuditEvent, Contact, Lead, Listing, ListingStatus, NewListing, SpendEntry } from './types'
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS listings (
@@ -33,7 +33,11 @@ CREATE TABLE IF NOT EXISTS contacts (
   lastFollowUpAt TEXT,
   followUps INTEGER NOT NULL DEFAULT 0,
   handedOffAt TEXT,
-  shown TEXT NOT NULL DEFAULT '[]'
+  shown TEXT NOT NULL DEFAULT '[]',
+  source TEXT,
+  sourceListing TEXT,
+  firstSeenAt TEXT,
+  lastCampaign TEXT
 );
 CREATE TABLE IF NOT EXISTS leads (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,7 +46,16 @@ CREATE TABLE IF NOT EXISTS leads (
   budget TEXT,
   timeline TEXT,
   summary TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'direct',
   createdAt TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS spend (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at TEXT NOT NULL,
+  listingCode TEXT,
+  channel TEXT NOT NULL,
+  amount REAL NOT NULL,
+  note TEXT
 );
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,6 +93,15 @@ export class Store {
   constructor(path = ':memory:') {
     this.db = new DatabaseSync(path)
     this.db.exec(SCHEMA)
+    this.addMissingColumns('contacts', { source: 'TEXT', sourceListing: 'TEXT', firstSeenAt: 'TEXT', lastCampaign: 'TEXT' })
+    this.addMissingColumns('leads', { source: "TEXT NOT NULL DEFAULT 'direct'" })
+  }
+
+  private addMissingColumns(table: string, columns: Record<string, string>) {
+    const existing = new Set((this.db.prepare(`PRAGMA table_info(${table})`).all() as Row[]).map(r => String(r.name)))
+    for (const [name, type] of Object.entries(columns)) {
+      if (!existing.has(name)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`)
+    }
   }
 
   close() {
@@ -163,9 +185,10 @@ export class Store {
   updateContact(phone: string, patch: Partial<Omit<Contact, 'phone'>>): Contact {
     const next = { ...this.contact(phone), ...patch }
     this.db.prepare(`UPDATE contacts SET name = ?, budgetMin = ?, budgetMax = ?, phases = ?, timeline = ?, optedIn = ?, optedOut = ?,
-      lastInboundAt = ?, lastFollowUpAt = ?, followUps = ?, handedOffAt = ?, shown = ? WHERE phone = ?`).run(
+      lastInboundAt = ?, lastFollowUpAt = ?, followUps = ?, handedOffAt = ?, shown = ?, source = ?, sourceListing = ?, firstSeenAt = ?, lastCampaign = ? WHERE phone = ?`).run(
       next.name, next.budgetMin, next.budgetMax, JSON.stringify(next.phases), next.timeline, Number(next.optedIn), Number(next.optedOut),
-      next.lastInboundAt, next.lastFollowUpAt, next.followUps, next.handedOffAt, JSON.stringify(next.shown), phone
+      next.lastInboundAt, next.lastFollowUpAt, next.followUps, next.handedOffAt, JSON.stringify(next.shown),
+      next.source, next.sourceListing, next.firstSeenAt, next.lastCampaign, phone
     )
     return next
   }
@@ -185,8 +208,8 @@ export class Store {
 
   addLead(lead: Omit<Lead, 'id' | 'createdAt'>): Lead {
     const createdAt = this.stamp()
-    const result = this.db.prepare('INSERT INTO leads (phone, listingCode, budget, timeline, summary, createdAt) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(lead.phone, lead.listingCode, lead.budget, lead.timeline, lead.summary, createdAt)
+    const result = this.db.prepare('INSERT INTO leads (phone, listingCode, budget, timeline, summary, source, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(lead.phone, lead.listingCode, lead.budget, lead.timeline, lead.summary, lead.source, createdAt)
     return { ...lead, id: Number(result.lastInsertRowid), createdAt }
   }
 
@@ -203,6 +226,18 @@ export class Store {
 
   events(limit = 50): AuditEvent[] {
     return this.db.prepare('SELECT * FROM events ORDER BY id DESC LIMIT ?').all(limit) as unknown as AuditEvent[]
+  }
+
+  addSpend(spend: Omit<SpendEntry, 'id' | 'at'>): SpendEntry {
+    const at = this.stamp()
+    const result = this.db.prepare('INSERT INTO spend (at, listingCode, channel, amount, note) VALUES (?, ?, ?, ?, ?)').run(at, spend.listingCode, spend.channel, spend.amount, spend.note)
+    return { ...spend, id: Number(result.lastInsertRowid), at }
+  }
+
+  spend(from?: string, to?: string): SpendEntry[] {
+    return (this.db.prepare('SELECT * FROM spend WHERE at >= ? AND at < ? ORDER BY id').all(from ?? '', to ?? '9999') as Row[]).map(r => ({
+      id: Number(r.id), at: String(r.at), listingCode: (r.listingCode as string | null) ?? null, channel: String(r.channel), amount: Number(r.amount), note: (r.note as string | null) ?? null
+    }))
   }
 
   conversation<T>(phone: string): T[] {
@@ -260,6 +295,10 @@ function toContact(row: Row): Contact {
     lastFollowUpAt: (row.lastFollowUpAt as string | null) ?? null,
     followUps: Number(row.followUps),
     handedOffAt: (row.handedOffAt as string | null) ?? null,
-    shown: JSON.parse(String(row.shown))
+    shown: JSON.parse(String(row.shown)),
+    source: (row.source as string | null) ?? null,
+    sourceListing: (row.sourceListing as string | null) ?? null,
+    firstSeenAt: (row.firstSeenAt as string | null) ?? null,
+    lastCampaign: (row.lastCampaign as string | null) ?? null
   }
 }

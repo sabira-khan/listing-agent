@@ -1,5 +1,6 @@
 import { escapeXml as esc } from './ad'
 import { formatPrice, type Config } from './config'
+import { buildReport, type ReportRow } from './report'
 import type { Store } from './store'
 
 export function renderDashboard(store: Store, config: Config): string {
@@ -9,6 +10,11 @@ export function renderDashboard(store: Store, config: Config): string {
   const events = store.events(30)
   const counts = (['pending', 'published', 'sold', 'ignored'] as const).map(s => ({ status: s, n: listings.filter(l => l.status === s).length }))
   const leadCount = (code: string) => leads.filter(l => l.listingCode === code).length
+  const now = store.now()
+  const report = buildReport(store, new Date(now.getTime() - 30 * 24 * 3600 * 1000), now)
+  const money = (n: number | null) => (n === null ? '' : `${n.toFixed(2)} ${esc(config.spendCurrency)}`)
+  const perfRows = (rows: ReportRow[]) => rows.map(r => `<tr><td>${esc(r.label)}</td><td>${r.enquiries}</td><td>${r.leads}</td><td>${money(r.spend)}</td><td>${money(r.costPerLead)}</td></tr>`).join('\n')
+  const perfHead = (first: string) => `<tr><th>${first}</th><th>Enquiries</th><th>Leads</th><th>Spend</th><th>Cost per lead</th></tr>`
 
   return `<!doctype html>
 <html lang="en">
@@ -45,6 +51,23 @@ ${counts.map(c => `<div class="stat"><b>${c.n}</b>${c.status}</div>`).join('')}
 <div class="stat"><b>${leads.length}</b>leads</div>
 <div class="stat"><b>${contacts.filter(c => c.optedIn && !c.optedOut).length}</b>opted-in customers</div>
 </div>
+<h2>Last 30 days</h2>
+<div class="stats">
+<div class="stat"><b>${report.enquiries}</b>enquiries</div>
+<div class="stat"><b>${report.leads}</b>leads</div>
+<div class="stat"><b>${report.spend.toFixed(2)}</b>${esc(config.spendCurrency)} spent</div>
+<div class="stat"><b>${report.costPerLead === null ? '-' : report.costPerLead.toFixed(2)}</b>${esc(config.spendCurrency)} per lead</div>
+</div>
+<h2>By source</h2>
+<div class="scroll"><table>
+${perfHead('Source')}
+${perfRows(report.sources)}
+</table></div>
+<h2>By plot</h2>
+<div class="scroll"><table>
+${perfHead('Plot')}
+${perfRows(report.listings)}
+</table></div>
 <h2>Listings</h2>
 <div class="scroll"><table>
 <tr><th>Ref</th><th>Status</th><th>Plot</th><th>Area</th><th>Price</th><th>Owner</th><th>Leads</th><th>Ad</th></tr>
@@ -52,8 +75,8 @@ ${listings.map(l => `<tr><td>${esc(l.code)}</td><td><span class="pill ${l.status
 </table></div>
 <h2>Leads</h2>
 <div class="scroll"><table>
-<tr><th>When</th><th>Customer</th><th>Plot</th><th>Budget</th><th>Timeline</th><th>Summary</th></tr>
-${leads.map(l => `<tr><td>${esc(l.createdAt.slice(0, 16).replace('T', ' '))}</td><td>+${esc(l.phone)}</td><td>${esc(l.listingCode ?? '')}</td><td>${esc(l.budget ?? '')}</td><td>${esc(l.timeline ?? '')}</td><td>${esc(l.summary)}</td></tr>`).join('\n')}
+<tr><th>When</th><th>Customer</th><th>Source</th><th>Plot</th><th>Budget</th><th>Timeline</th><th>Summary</th></tr>
+${leads.map(l => `<tr><td>${esc(l.createdAt.slice(0, 16).replace('T', ' '))}</td><td>+${esc(l.phone)}</td><td>${esc(l.source)}</td><td>${esc(l.listingCode ?? '')}</td><td>${esc(l.budget ?? '')}</td><td>${esc(l.timeline ?? '')}</td><td>${esc(l.summary)}</td></tr>`).join('\n')}
 </table></div>
 <h2>Activity</h2>
 <div class="scroll"><table>

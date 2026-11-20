@@ -63,6 +63,10 @@ export interface Contact {
   followUps: number
   handedOffAt: string | null
   shown: string[]
+  source: string | null
+  sourceListing: string | null
+  firstSeenAt: string | null
+  lastCampaign: string | null
 }
 
 export interface Lead {
@@ -72,7 +76,17 @@ export interface Lead {
   budget: string | null
   timeline: string | null
   summary: string
+  source: string
   createdAt: string
+}
+
+export interface SpendEntry {
+  id: number
+  at: string
+  listingCode: string | null
+  channel: string
+  amount: number
+  note: string | null
 }
 
 export interface AuditEvent {

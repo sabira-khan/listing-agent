@@ -2,6 +2,10 @@
 
 A WhatsApp assistant for real estate offices that sell land plots. Staff forward an owner's offer once. The system turns it into a listing, designs the ad, asks the owner to approve it, publishes it, and then answers buyers around the clock, qualifies them and hands the serious ones to a person.
 
+![An owner forwards an offer and publishes it, then a buyer from Instagram asks for a discount, is refused, and is handed to the owner](docs/demo.gif)
+
+The demo is a real run against Claude, recorded with `npm run demo`: the owner on the left, a buyer who came from the Instagram ad on the right.
+
 <p>
 <img src="docs/ad-portrait.png" width="300" alt="Generated portrait ad for plot 2520">
 <img src="docs/ad-square.png" width="300" alt="Generated square ad for plot 2672">
@@ -30,7 +34,26 @@ buyer message
 - **Ads** (`src/ad.ts`) are SVG, rendered to PNG with resvg: square for feeds, portrait for Instagram and story for Stories and TikTok. A price change re-renders them instantly.
 - **Buyer agent** (`src/buyer-agent.ts`) is a tool-calling loop on Claude Haiku with five tools: `search_listings`, `get_listing`, `send_ad`, `save_preferences` and `hand_off`.
 - **Store** (`src/store.ts`) is SQLite through Node's built-in `node:sqlite`: listings, contacts, leads, conversations and an audit log of every action and who took it.
-- **Dashboard** (`/admin`) shows listings by status, leads per listing and recent activity, behind a password.
+- **Dashboard** (`/admin`) shows the last 30 days by source and by plot, listings by status, leads and recent activity, behind a password.
+
+## Lead tracking and reports
+
+Every lead is traced back to the plot and channel that brought it, so the office can see what each enquiry costs.
+
+- Each published caption carries a click-to-WhatsApp link with a prefilled message such as `Hi, I'm interested in L-0007 [ig]`. The first message a customer sends records the listing and the source (`ig`, `fb`, `tt` or `web`), and the tag is removed before the agent sees the message.
+- Customers who reply after a broadcast or a follow-up are credited to that campaign. Everyone else is `direct`. The first touch is kept, so a later message from another ad does not overwrite it.
+- Broadcast and follow-up messages are recorded as spend automatically. Paid ad spend is entered by the owner on WhatsApp: `spend L-0007 instagram 25`.
+- `report` on WhatsApp returns the last 30 days. `POST /tasks/report`, or `npm run report -- --send`, sends last month's report to the owners: enquiries, leads, spend and cost per lead by source and by plot, plus what was published and sold.
+
+```
+Report 1 Oct to 31 Oct
+3 enquiries, 1 leads, 30.05 USD spent, 30.05 USD per lead
+Published: L-0015. Sold: L-0010.
+
+By source
+instagram: 2 enquiries, 1 leads, 30.00 USD, 30.00 USD per lead
+broadcast: 1 enquiries, 0 leads, 0.05 USD, no leads
+```
 
 ## Guardrails
 
@@ -106,6 +129,8 @@ npm run chat
 npm run chat -- "any waterfront plots under 430k?" "I'd like to view the cheaper one this week, budget 400k"
 npm run chat -- --owner "Owner wants to sell plot 2561, asking 210k" "#publish:L-0015"
 npm run intake -- "plot 2447, owner Nadia, 255 thousand"
+npm run report -- --days=30
+npm run demo
 ```
 
 `npm run chat` runs the full message handling in the terminal against the sample listings, without WhatsApp. With `--owner` you act as the office owner, and `#<button id>` presses a button.
@@ -116,7 +141,8 @@ npm run intake -- "plot 2447, owner Nadia, 255 thousand"
 2. Copy `.env.example` to `.env`. Fill in the WhatsApp token, phone number ID, app secret and a verify token of your choice, and set `OWNER_PHONES` and `STAFF_PHONES`.
 3. Create two message templates in WhatsApp Manager. `new_listing` has an image header and 5 body parameters: plot, phase, area, price and reference. `listing_follow_up` has 1 body parameter: the customer's name. Templates are needed because WhatsApp only allows free-form messages within 24 hours of the customer's last message.
 4. Run `npm start` on a host with a public HTTPS URL. Set `PUBLIC_BASE_URL` to it and configure `https://your-host/webhook` as the webhook in Meta.
-5. Schedule `POST /tasks/follow-ups` with the admin password, for example hourly.
+5. Schedule `POST /tasks/follow-ups` with the admin password, for example hourly, and `POST /tasks/report` on the first of each month.
+6. Set `WHATSAPP_DISPLAY_NUMBER` to the public number so captions include the tracked click-to-WhatsApp link.
 
 For Instagram and Facebook publishing, set `META_ACCESS_TOKEN` with `INSTAGRAM_USER_ID` and/or `FACEBOOK_PAGE_ID`. Instagram fetches the image from `PUBLIC_BASE_URL/media/<ref>/portrait.png`, which only serves published listings.
 
@@ -128,7 +154,8 @@ For Instagram and Facebook publishing, set `META_ACCESS_TOKEN` with `INSTAGRAM_U
 | `AGENT_MODEL`, `INTAKE_MODEL` | Models for the buyer agent and intake |
 | `WHATSAPP_*` | WhatsApp Cloud API credentials |
 | `LISTING_TEMPLATE`, `FOLLOW_UP_TEMPLATE`, `TEMPLATE_LANGUAGE` | Template names and language |
-| `MESSAGE_COST` | Cost per broadcast message in USD, shown before sending |
+| `WHATSAPP_DISPLAY_NUMBER` | The public WhatsApp number used in tracked ad links |
+| `MESSAGE_COST`, `SPEND_CURRENCY` | Cost per template message, and the currency for spend and reports |
 | `META_ACCESS_TOKEN`, `INSTAGRAM_USER_ID`, `FACEBOOK_PAGE_ID` | Optional social publishing |
 | `PUBLIC_BASE_URL`, `ADMIN_PASSWORD` | Public URL for images, password for the dashboard |
 | `DB_PATH`, `DISTRICT_PATH`, `FONT_FILES` | Storage, plot map and fonts for ad rendering |
@@ -139,6 +166,7 @@ For Instagram and Facebook publishing, set `META_ACCESS_TOKEN` with `INSTAGRAM_U
 - The Instagram and Facebook adapters follow Meta's documented Graph API flow and are covered by tests with a fake API, but they need an approved Meta app to run for real. TikTok publishing and paid ad boosting are not included.
 - Buyer replies are in the customer's language, but the eval cases are in English.
 - The dashboard is for the owner only. There are no separate staff or marketer views yet.
+- Instagram does not make links in captions clickable, so the tracked link belongs in the bio or a story link sticker. Paid ad spend is entered by hand because the Meta Marketing API is not connected.
 - The rendered certificate in the intake eval is cleaner than a real phone photo.
 
 ## License

@@ -18,6 +18,7 @@ const result = await runFollowUps({
   directory: GeoJsonDistrict.fromFile(config.districtPath),
   brand: brand(config),
   followUpTemplate: config.followUpTemplate,
-  listingTemplate: config.listingTemplate
+  listingTemplate: config.listingTemplate,
+  messageCost: config.messageCost
 })
 console.log(`Sent ${result.first} first follow-ups and ${result.second} with a similar listing.`)

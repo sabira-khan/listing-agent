@@ -82,11 +82,11 @@ test('instagram and facebook publishers post the public image URL', async () => 
 
   const imageUrl = (code: string, size: string) => `https://example.com/media/${code}/${size}.png`
   const ig = fakeFetch({ '/media': { id: 'container' }, '/media_publish': { id: 'post' } })
-  const ref = await new InstagramPublisher('IG', { token: 't', graphVersion: 'v23.0', imageUrl, fetch: ig.fetch }).publish(listing, {} as never, text)
+  const ref = await new InstagramPublisher('IG', { token: 't', graphVersion: 'v23.0', imageUrl, fetch: ig.fetch }).publish(listing, {} as never, () => text)
   assert.equal(ref, 'instagram:post')
   assert.equal(JSON.parse(String(ig.calls[0].init.body)).image_url, 'https://example.com/media/L-0007/portrait.png')
   assert.equal(JSON.parse(String(ig.calls[1].init.body)).creation_id, 'container')
 
   const fb = fakeFetch({ '/photos': { id: 'photo', post_id: 'page_post' } })
-  assert.equal(await new FacebookPagePublisher('PG', { token: 't', graphVersion: 'v23.0', imageUrl, fetch: fb.fetch }).publish(listing, {} as never, text), 'facebook:page_post')
+  assert.equal(await new FacebookPagePublisher('PG', { token: 't', graphVersion: 'v23.0', imageUrl, fetch: fb.fetch }).publish(listing, {} as never, () => text), 'facebook:page_post')
 })

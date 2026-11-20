@@ -3,7 +3,7 @@ import type { AppDeps } from '../src/app'
 import { MemoryChannel } from '../src/channel'
 import { loadConfig } from '../src/config'
 import { GeoJsonDistrict } from '../src/district'
-import type { AdImages, Publisher } from '../src/publish'
+import type { AdImages, CaptionFor, Publisher } from '../src/publish'
 import { seedStore } from '../src/seed'
 import { Store } from '../src/store'
 import type { Listing } from '../src/types'
@@ -50,8 +50,8 @@ export class MemoryPublisher implements Publisher {
   readonly name = 'memory'
   readonly published: { listing: Listing; sizes: string[]; caption: string }[] = []
 
-  async publish(listing: Listing, images: AdImages, caption: string) {
-    this.published.push({ listing, sizes: Object.keys(images), caption })
+  async publish(listing: Listing, images: AdImages, captionFor: CaptionFor) {
+    this.published.push({ listing, sizes: Object.keys(images), caption: captionFor('ig') })
     return `memory:${listing.code}`
   }
 }
@@ -59,7 +59,7 @@ export class MemoryPublisher implements Publisher {
 export const directory = GeoJsonDistrict.fromFile('data/sample-district.geojson')
 
 export function makeApp(script: Script, options: { seed?: boolean } = {}) {
-  const config = { ...loadConfig({}), ownerPhones: [OWNER], staffPhones: [STAFF], contactLine: 'WhatsApp +1 555 0100' }
+  const config = { ...loadConfig({}), ownerPhones: [OWNER], staffPhones: [STAFF], contactLine: 'WhatsApp +1 555 0100', whatsappNumber: '15550100' }
   const store = new Store()
   if (options.seed !== false) seedStore(store, directory)
   const channel = new MemoryChannel()

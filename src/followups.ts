@@ -12,6 +12,7 @@ export interface FollowUpDeps {
   brand: Brand
   followUpTemplate: string
   listingTemplate: string
+  messageCost?: number
 }
 
 export interface FollowUpPlan {
@@ -52,7 +53,8 @@ export async function runFollowUps(deps: FollowUpDeps, now = deps.store.now()) {
   const plan = planFollowUps(store, now)
   for (const contact of plan.first) {
     await channel.send(contact.phone, { kind: 'template', name: deps.followUpTemplate, params: [contact.name ?? 'there'] })
-    store.updateContact(contact.phone, { followUps: 1, lastFollowUpAt: now.toISOString() })
+    store.updateContact(contact.phone, { followUps: 1, lastFollowUpAt: now.toISOString(), lastCampaign: 'follow_up' })
+    if (deps.messageCost) store.addSpend({ listingCode: null, channel: 'follow_up', amount: deps.messageCost, note: contact.phone })
     store.log('system', 'follow_up', null, contact.phone)
   }
   for (const { contact, listing } of plan.second) {
@@ -62,7 +64,8 @@ export async function runFollowUps(deps: FollowUpDeps, now = deps.store.now()) {
       png: renderAdPng(listing, deps.directory, deps.brand, 'square'),
       params: [listing.plot, listing.phase, `${listing.areaM2} m²`, formatPrice(listing.price, deps.brand.currency), listing.code]
     })
-    store.updateContact(contact.phone, { followUps: 2, lastFollowUpAt: now.toISOString(), shown: [...contact.shown, listing.code] })
+    store.updateContact(contact.phone, { followUps: 2, lastFollowUpAt: now.toISOString(), shown: [...contact.shown, listing.code], lastCampaign: `follow_up:${listing.code}` })
+    if (deps.messageCost) store.addSpend({ listingCode: listing.code, channel: 'follow_up', amount: deps.messageCost, note: contact.phone })
     store.log('system', 'follow_up_listing', listing.code, contact.phone)
   }
   return { first: plan.first.length, second: plan.second.length }

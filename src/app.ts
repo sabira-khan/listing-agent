@@ -1,11 +1,13 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import { renderAdPng, renderAllAds, type Brand } from './ad'
+import { campaignSource, CHANNEL_ALIASES, parseReferral } from './attribution'
 import { runBuyerAgent } from './buyer-agent'
 import type { Channel, Inbound } from './channel'
 import { formatPrice, normalizePhone, type Config } from './config'
 import type { PlotDirectory } from './district'
 import { buildDraft, extractListing, type IntakeImage } from './intake'
 import { caption, type Publisher } from './publish'
+import { buildReport, formatReport, previousMonth } from './report'
 import type { Store } from './store'
 import type { Lead, Listing } from './types'
 
@@ -139,6 +141,31 @@ async function handleOwnerCommand(message: Inbound, deps: AppDeps): Promise<bool
     }
   }
 
+  const spent = text.match(/^spend\s+(L-\d+)\s+([a-z]+)\s+(\d+(?:\.\d+)?)$/i)
+  if (spent) {
+    const listing = store.getListing(spent[1])
+    const spendChannel = CHANNEL_ALIASES[spent[2].toLowerCase()]
+    if (!spendChannel) {
+      await channelSend(deps, owner, `Unknown channel ${spent[2]}. Use ${Object.keys(CHANNEL_ALIASES).filter(k => k.length > 3).join(', ')}.`)
+      return true
+    }
+    if (!listing) {
+      await channelSend(deps, owner, `Listing ${spent[1].toUpperCase()} was not found.`)
+      return true
+    }
+    store.addSpend({ listingCode: listing.code, channel: spendChannel, amount: Number(spent[3]), note: 'entered by owner' })
+    store.log(owner, 'spend', listing.code, `${spendChannel} ${spent[3]}`)
+    await channelSend(deps, owner, `Recorded ${Number(spent[3]).toFixed(2)} ${config.spendCurrency} on ${spendChannel} for ${listing.code}.`)
+    return true
+  }
+
+  if (/^report$/i.test(text)) {
+    const now = store.now()
+    const report = buildReport(store, new Date(now.getTime() - 30 * 24 * 3600 * 1000), now)
+    await channelSend(deps, owner, formatReport(report, config.spendCurrency))
+    return true
+  }
+
   const sold = text.match(/^sold\s+(L-\d+)$/i)
   if (sold) {
     const listing = store.getListing(sold[1])
@@ -153,10 +180,21 @@ async function handleOwnerCommand(message: Inbound, deps: AppDeps): Promise<bool
   }
 
   if (/^help$/i.test(text)) {
-    await channel.send(owner, { kind: 'text', text: 'Forward an owner\'s offer to create a listing. Use the buttons to publish, edit the price or ignore it. Send "sold L-0001" when a plot is sold.' })
+    await channel.send(owner, { kind: 'text', text: 'Forward an owner\'s offer to create a listing. Use the buttons to publish, edit the price or ignore it. Send "sold L-0001" when a plot is sold, "spend L-0001 instagram 25" to record ad spend, and "report" for the last 30 days.' })
     return true
   }
   return false
+}
+
+function channelSend(deps: AppDeps, to: string, text: string) {
+  return deps.channel.send(to, { kind: 'text', text })
+}
+
+export async function sendMonthlyReport(deps: AppDeps, now = deps.store.now()) {
+  const { from, to } = previousMonth(now)
+  const text = formatReport(buildReport(deps.store, from, to), deps.config.spendCurrency)
+  for (const owner of deps.config.ownerPhones) await channelSend(deps, owner, text)
+  return text
 }
 
 export function parseAmount(text: string): number | null {
@@ -170,11 +208,11 @@ async function publish(listing: Listing, owner: string, deps: AppDeps) {
   const { store, channel, config } = deps
   const current = store.updateListing(listing.code, { status: 'published' })
   const images = renderAllAds(current, deps.directory, brand(config))
-  const text = caption(current, config.currency, config.contactLine)
+  const captionFor = (tag: string) => caption(current, config.currency, config.contactLine, config.whatsappNumber, tag)
   const results: string[] = []
   for (const publisher of deps.publishers) {
     try {
-      const ref = await publisher.publish(current, images, text)
+      const ref = await publisher.publish(current, images, captionFor)
       store.log(owner, 'published', current.code, `${publisher.name} ${ref}`)
       results.push(`${publisher.name}: done`)
     } catch (err) {
@@ -216,13 +254,14 @@ async function broadcast(listing: Listing, owner: string, deps: AppDeps) {
         png,
         params: [listing.plot, listing.phase, `${listing.areaM2} m²`, formatPrice(listing.price, config.currency), listing.code]
       })
-      store.updateContact(contact.phone, { shown: [...new Set([...contact.shown, listing.code])] })
+      store.updateContact(contact.phone, { shown: [...new Set([...contact.shown, listing.code])], lastCampaign: `broadcast:${listing.code}` })
       sent++
     } catch (err) {
       store.log('system', 'broadcast_failed', listing.code, `${contact.phone} ${(err as Error).message}`)
     }
   }
   store.log(owner, 'broadcast', listing.code, `${sent} of ${audience.length}`)
+  if (sent) store.addSpend({ listingCode: listing.code, channel: 'broadcast', amount: sent * config.messageCost, note: `${sent} messages` })
   await channel.send(owner, { kind: 'text', text: `${listing.code} sent to ${sent} of ${audience.length} customers.` })
 }
 
@@ -230,7 +269,20 @@ async function handleBuyer(message: Inbound, deps: AppDeps) {
   const { store, channel, config } = deps
   const phone = normalizePhone(message.from)
   const word = message.text.trim().toLowerCase()
-  store.updateContact(phone, { lastInboundAt: store.now().toISOString(), followUps: 0 })
+  const referral = parseReferral(message.text)
+  const contact = store.contact(phone)
+  const at = store.now().toISOString()
+  const firstTouch = contact.source
+    ? {}
+    : (() => {
+        const campaign = campaignSource(contact.lastCampaign)
+        return {
+          source: referral.source ?? campaign?.source ?? 'direct',
+          sourceListing: referral.code ?? campaign?.listing ?? null,
+          firstSeenAt: at
+        }
+      })()
+  store.updateContact(phone, { lastInboundAt: at, followUps: 0, ...firstTouch })
 
   if (STOP_WORDS.includes(word)) {
     store.updateContact(phone, { optedOut: true, optedIn: false })
@@ -249,7 +301,7 @@ async function handleBuyer(message: Inbound, deps: AppDeps) {
     return
   }
 
-  const result = await runBuyerAgent(phone, message.text, {
+  const result = await runBuyerAgent(phone, referral.text, {
     client: deps.client,
     model: config.agentModel,
     store,
